@@ -29,7 +29,12 @@ def receive():
 def write():
     """Send messages to the server."""
     while True:
-        message = f"{nickname}: {input('')}"
+        # Prompt the user for a message
+        msg = input("Input your message ('exit' to exit): ")
+        if msg.lower() == "exit":
+            client.close()
+            break
+        message = f"{nickname}: {msg}"
         client.send(message.encode('utf-8'))
 
 # Start threads for receiving and sending messages
