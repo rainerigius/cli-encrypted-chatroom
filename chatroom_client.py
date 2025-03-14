@@ -28,9 +28,10 @@ def receive():
 
 def write():
     """Send messages to the server."""
+    print("Write 'exit' to exit the chatroom.\n")
     while True:
         # Prompt the user for a message
-        msg = input("Input your message ('exit' to exit): ")
+        msg = input()
         if msg.lower() == "exit":
             client.close()
             break
