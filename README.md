@@ -23,8 +23,8 @@
           │ For each recipient (e.g., UserB,   │
           │ UserC, etc.):                      │
           │   Encrypt symmetric key using      │
-          │   recipient's RSA public key         │
-          │   → produces "encrypted_key" per     │
+          │   recipient's RSA public key       │
+          │   → produces "encrypted_key" per   │
           │      recipient                     │
           └────────────────────────────────────┘
                                   │
@@ -33,9 +33,9 @@
           │ Build JSON Packet:                 │
           │ {                                  │
           │    "encrypted_message": "...",     │
-          │    "encrypted_keys": {              │
-          │         "UserB": "...",             │
-          │         "UserC": "..."              │
+          │    "encrypted_keys": {             │
+          │         "UserB": "...",            │
+          │         "UserC": "..."             │
           │    }                               │
           │ }  (All data ENCRYPTED)            │
           └────────────────────────────────────┘
@@ -59,17 +59,17 @@
                                   │
                                   ▼
                 ┌────────────────────────────────────┐
-                │ Decrypt NicknameB's "encrypted_key"  │
-                │ using its RSA private key →          │
-                │ recovers symmetric key               │
+                │ Decrypt NicknameB's "encrypted_key"│
+                │ using its RSA private key →        │
+                │ recovers symmetric key             │
                 └────────────────────────────────────┘
                                   │
                                   ▼
                 ┌────────────────────────────────────┐
-                │ Decrypt "encrypted_message" using    │
-                │ the recovered symmetric key          │
-                │ → yields plaintext:                  │
-                │ "NicknameA: Hello everyone!"         │
+                │ Decrypt "encrypted_message" using  │
+                │ the recovered symmetric key        │
+                │ → yields plaintext:                │
+                │ "NicknameA: Hello everyone!"       │
                 └────────────────────────────────────┘
                                   │
                                   ▼
