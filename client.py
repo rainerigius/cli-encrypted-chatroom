@@ -27,26 +27,28 @@ def load_or_generate_keys():
             f.write(private_key.private_bytes(
                 encoding=serialization.Encoding.PEM,
                 format=serialization.PrivateFormat.TraditionalOpenSSL,
-                encryption_algorithm=serialization.NoEncryption()))
+                encryption_algorithm=serialization.NoEncryption()
+            ))
         with open("public_key.pem", "wb") as f:
             f.write(public_key.public_bytes(
                 encoding=serialization.Encoding.PEM,
-                format=serialization.PublicFormat.SubjectPublicKeyInfo))
+                format=serialization.PublicFormat.SubjectPublicKeyInfo
+            ))
         return private_key, public_key
 
 def encrypt_hybrid(plaintext, recipient_public_keys):
     """
     Encrypt the plaintext using a random symmetric key (Fernet),
     then encrypt that symmetric key with each recipient’s RSA public key.
-    Returns a JSON string containing the encrypted message and the
-    encrypted symmetric keys (one per recipient).
+    Returns a JSON string containing the encrypted message and
+    the encrypted symmetric keys (one per recipient).
     """
     # Generate random symmetric key and encrypt the message
     symmetric_key = Fernet.generate_key()
     f = Fernet(symmetric_key)
     encrypted_message = f.encrypt(plaintext.encode('utf-8')).decode('utf-8')
     
-    # Encrypt symmetric key for each recipient
+    # Encrypt the symmetric key for each recipient
     encrypted_keys = {}
     for nick, pub_key in recipient_public_keys.items():
         enc_sym_key = pub_key.encrypt(
@@ -75,6 +77,7 @@ def decrypt_hybrid(package_str, own_nickname, private_key):
     encrypted_keys = package['encrypted_keys']
     
     if own_nickname not in encrypted_keys:
+        # This message was not encrypted for the current user.
         raise Exception("No encrypted key available for this user.")
     
     enc_sym_key = base64.b64decode(encrypted_keys[own_nickname])
@@ -90,90 +93,115 @@ def decrypt_hybrid(package_str, own_nickname, private_key):
     decrypted_message = f.decrypt(encrypted_message.encode('utf-8')).decode('utf-8')
     return decrypted_message
 
-# ----------------- Global Variables and Socket Setup -----------------
+# ----------------- Global Variables -----------------
 
-# Ask user for a nickname
-nickname = input("Choose your nickname: ")
+HOST = '127.0.0.1'
+PORT = 12345
 
 # Load or generate RSA keys for PGP-like encryption
 private_key, public_key = load_or_generate_keys()
-# Serialize our public key to send to others (as a PEM string)
 my_public_pem = public_key.public_bytes(
     encoding=serialization.Encoding.PEM,
     format=serialization.PublicFormat.SubjectPublicKeyInfo
 ).decode('utf-8')
 
-# Dictionary to store known public keys of all participants (including self)
-public_keys = {nickname: public_key}
+public_keys = {}  # {nickname: public_key_object}
 
-# Server address configuration
-HOST = '127.0.0.1'  # Server's IP address
-PORT = 12345        # Server's listening port
+# ----------------- Handshake Logic -----------------
 
-client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-client.connect((HOST, PORT))
+def try_connect(nickname):
+    """
+    Connect to the server, handle the nickname handshake.
+    Returns the socket if successful, or None if we need a new nickname.
+    """
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.connect((HOST, PORT))
+    
+    # Wait for server to request a nickname
+    msg = sock.recv(4096).decode('utf-8')
+    if msg == "NICK":
+        sock.send(nickname.encode('utf-8'))
+        # Next message could be NICKACCEPT or NICKTAKEN
+        msg2 = sock.recv(4096).decode('utf-8')
+        if msg2 == "NICKACCEPT":
+            # We store our own nickname in the dictionary too
+            public_keys[nickname] = public_key
+            return sock
+        elif msg2 == "NICKTAKEN":
+            sock.close()
+            return None
+    return None
 
-# ----------------- Communication Functions -----------------
+# ----------------- Main Client Flow -----------------
+
+while True:
+    nickname = input("Choose your nickname: ")
+    client = try_connect(nickname)
+    if client is None:
+        print("Nickname already taken. Please choose another one.")
+    else:
+        break
+
+def broadcast_our_key():
+    """Send our public key to everyone (via the server)."""
+    pubkey_msg = f"PUBKEY::{nickname}::{my_public_pem}"
+    client.send(pubkey_msg.encode('utf-8'))
 
 def receive():
-    """Receive messages from the server and process control and chat messages."""
+    """Receive messages, decrypt them if possible, and print plaintext with nickname."""
     while True:
         try:
-            message = client.recv(4096).decode('utf-8')
-            if not message:
+            data = client.recv(4096)
+            if not data:
                 break
+            message = data.decode('utf-8')
 
-            # Handle control messages:
-            if message == "NICK":
-                # Send nickname to server
-                client.send(nickname.encode('utf-8'))
-                # After nickname, immediately send our public key to everyone
-                pubkey_msg = f"PUBKEY::{nickname}::{my_public_pem}"
-                client.send(pubkey_msg.encode('utf-8'))
-            elif message.startswith("PUBKEY::"):
+            if message.startswith("PUBKEY::"):
                 # Format: PUBKEY::<sender_nickname>::<public_key_pem>
                 try:
                     _, sender, pubkey_pem = message.split("::", 2)
                     if sender not in public_keys:
                         other_pub = serialization.load_pem_public_key(pubkey_pem.encode('utf-8'))
                         public_keys[sender] = other_pub
-                        print(f"[Key Exchange] Received public key from {sender}.")
-                    # Optionally, if you already joined, you could re-send your own pubkey here.
-                except Exception as e:
-                    print("Error processing public key message:", e)
+                except:
+                    pass
+            elif message.endswith(" joined the chat!"):
+                # New user joined
+                print(message)
+                # Send our key so they can encrypt messages for us
+                broadcast_our_key()
             else:
-                # Assume this is a chat message package (JSON string produced by encrypt_hybrid)
-                # Even though decryption happens in the background, we print only the encrypted package.
-                # (In a real secure chat, decryption would yield the plaintext, but here we hide it.)
+                # Likely an encrypted JSON
                 try:
-                    # Uncomment the following line to see the decrypted message (for debugging):
-                    # decrypted = decrypt_hybrid(message, nickname, private_key)
-                    # print(f"[Decrypted] {decrypted}")
-                    # Instead, show the encrypted package:
-                    print(f"[Encrypted Message] {message}")
-                except Exception as e:
-                    print("Error decrypting message:", e)
-        except Exception as e:
-            print("An error occurred! Disconnected from server.", e)
+                    decrypted = decrypt_hybrid(message, nickname, private_key)
+                    print(decrypted)
+                except:
+                    # If no key is available for us, ignore
+                    pass
+
+        except Exception:
             client.close()
             break
 
 def write():
-    """Read user input, encrypt it for all known participants, and send it."""
-    print("Write 'exit' to exit the chatroom.\n")
+    """Continuously read user input, encrypt it, and send to the server."""
+    # Immediately broadcast our key so others can encrypt for us
+    broadcast_our_key()
+    
     while True:
-        msg = input("Input your message ('exit' to exit): ")
+        msg = input()
         if msg.lower() == "exit":
             client.close()
             break
         
-        # Encrypt the plaintext message using the hybrid method.
-        # (It will be encrypted for every participant whose public key we know.)
-        encrypted_package = encrypt_hybrid(msg, public_keys)
+        # Embed the nickname into the plaintext
+        plaintext = f"{nickname}: {msg}"
+        
+        # Encrypt the plaintext for all known participants
+        encrypted_package = encrypt_hybrid(plaintext, public_keys)
         client.send(encrypted_package.encode('utf-8'))
 
-# ----------------- Start Threads -----------------
-
+# Start the receive/write threads
 receive_thread = threading.Thread(target=receive)
 receive_thread.start()
 
