@@ -9,7 +9,7 @@ from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives.asymmetric import rsa, padding
 from cryptography.hazmat.primitives import serialization, hashes
 
-HOST = '217.154.16.131'  # Replace with your server's public IP or domain
+HOST = '127.0.0.1'  # Replace with your server's public IP or domain
 PORT = 12345
 
 # ----------------- Key Management and Hybrid Encryption Functions -----------------

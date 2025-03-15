@@ -1,4 +1,5 @@
 # Packet Diagram
+
                            [CLIENT A (Sender)]
                            (NicknameA)
                                   │
@@ -7,7 +8,7 @@
                                   ▼
           ┌────────────────────────────────────┐
           │ Generate random symmetric key      │
-          │ (e.g., Fernet key)                 │
+          │ (Fernet key)                       │
           └────────────────────────────────────┘
                                   │
                                   ▼
@@ -17,14 +18,12 @@
           └────────────────────────────────────┘
                                   │
                                   ▼
-          ┌────────────────────────────────────┐
-          │ For each recipient (e.g., UserB,   │
-          │ UserC, etc.):                      │
-          │   Encrypt symmetric key using      │
-          │   recipient's RSA public key       │
-          │   → produces "encrypted_key" per   │
-          │      recipient                     │
-          └────────────────────────────────────┘
+          ┌──────────────────────────────────────┐
+          │ For each recipient:                  │
+          │   Encrypt symmetric key using        │
+          │   recipient's RSA public key         │
+          │   → produces "encrypted_key" for each│
+          └──────────────────────────────────────┘
                                   │
                                   ▼
           ┌────────────────────────────────────┐
@@ -35,7 +34,7 @@
           │         "UserB": "...",            │
           │         "UserC": "..."             │
           │    }                               │
-          │ }  (All data ENCRYPTED)            │
+          │ }  (All data encrypted)            │
           └────────────────────────────────────┘
                                   │
                                   │  (Encrypted JSON Packet sent over network)
@@ -51,15 +50,15 @@
                 ┌────────────────────────────────────┐
                 │ Extract from JSON:                 │
                 │   - "encrypted_message"            │
-                │   - "encrypted_keys" (including    │
-                │      encrypted key for NicknameB)  │
+                │   - "encrypted_keys" (with key for │
+                │      NicknameB)                    │
                 └────────────────────────────────────┘
                                   │
                                   ▼
                 ┌────────────────────────────────────┐
                 │ Decrypt NicknameB's "encrypted_key"│
-                │ using its RSA private key →        │
-                │ recovers symmetric key             │
+                │ using its RSA private key          │
+                │ → recovers symmetric key           │
                 └────────────────────────────────────┘
                                   │
                                   ▼
