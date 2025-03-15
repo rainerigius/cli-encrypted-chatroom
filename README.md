@@ -10,26 +10,26 @@ Each version is self-contained within its own directory and includes its respect
 
 ## Repository Structure
 
-cli-chatroom/
-├── LICENSE
-├── README.md           # Main README file
-├── single-room/
-│   ├── client.py
-│   ├── server.py
-│   ├── PacketDiagram.md
-│   └── README.md
-├── multi-room-no-tsl/
-│   ├── client.py
-│   ├── server.py
-│   ├── PacketDiagram.md
-│   └── README.md
-└── multi-room-tsl/
-    ├── client.py
-    ├── server.py
-    ├── PacketDiagram.md
-    ├── README.md
-    ├── sslcertgen.sh    # Shell script for generating SSL certificates (Linux/Mac)
-    └── sslcertgen.bat   # Batch script for generating SSL certificates (Windows)
+- **cli-chatroom/**
+  - `LICENSE`
+  - `README.md` (Main README file)
+  - **single-room/**
+    - `client.py`
+    - `server.py`
+    - `PacketDiagram.md`
+    - `README.md`
+  - **multi-room-no-tsl/**
+    - `client.py`
+    - `server.py`
+    - `PacketDiagram.md`
+    - `README.md`
+  - **multi-room-tsl/**
+    - `client.py`
+    - `server.py`
+    - `PacketDiagram.md`
+    - `README.md`
+    - `sslcertgen.sh` (Shell script for generating SSL certificates for Linux/Mac)
+    - `sslcertgen.bat` (Batch script for generating SSL certificates for Windows)
 
 ## Getting Started
 
