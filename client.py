@@ -184,6 +184,7 @@ def receive():
             break
 
 def write():
+    print("Type 'exit' to leave the chat.")
     """Continuously read user input, encrypt it, and send to the server."""
     # Immediately broadcast our key so others can encrypt for us
     broadcast_our_key()
